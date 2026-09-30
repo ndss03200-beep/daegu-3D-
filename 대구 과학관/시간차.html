@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>양이간 시간차</title>
+<style>
+/* ===== 폰트 (fonts 폴더) ===== */
+@font-face{font-family:'Pretendard';font-weight:400;src:url('fonts/Pretendard-Regular.woff2') format('woff2');}
+@font-face{font-family:'Pretendard';font-weight:500;src:url('fonts/Pretendard-Medium.woff2') format('woff2');}
+@font-face{font-family:'Pretendard';font-weight:600;src:url('fonts/Pretendard-SemiBold.woff2') format('woff2');}
+@font-face{font-family:'Pretendard';font-weight:700;src:url('fonts/Pretendard-Bold.woff2') format('woff2');}
+@font-face{font-family:'Montserrat';font-weight:400;src:url('fonts/Montserrat-400.woff2') format('woff2');}
+@font-face{font-family:'Montserrat';font-weight:500;src:url('fonts/Montserrat-500.woff2') format('woff2');}
+@font-face{font-family:'Montserrat';font-weight:600;src:url('fonts/Montserrat-600.woff2') format('woff2');}
+@font-face{font-family:'Montserrat';font-weight:700;src:url('fonts/Montserrat-700.woff2') format('woff2');}
+
+:root{
+  --p:#716EFF; --cy:#06B6D4; --vi:#D194FF; --gr:#22C55D; --rd:#FF6D6D;
+  --pre:'Pretendard',-apple-system,'Malgun Gothic',sans-serif;
+  --mont:'Montserrat','Pretendard','Malgun Gothic',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;}
+body{font-family:var(--pre);color:#fff;user-select:none;-webkit-user-select:none;}
+button{font-family:inherit;border:none;background:none;color:inherit;cursor:pointer;outline:none;}
+img{-webkit-user-drag:none;user-select:none;}
+b{font-weight:inherit;}
+
+/* ===== 1920x1080 무대 : 화면 크기에 맞춰 자동 확대/축소 ===== */
+#stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:50% 50%;overflow:hidden;background:#000;}
+.screen{position:absolute;inset:0;overflow:hidden;opacity:0;visibility:hidden;transition:opacity .35s ease,visibility 0s linear .35s;}
+.screen.active{opacity:1;visibility:visible;transition:opacity .35s ease;}
+.bg{position:absolute;left:0;top:0;width:1920px;height:1080px;}
+.t{position:absolute;white-space:nowrap;letter-spacing:-0.01em;}
+
+/* ===== 공통 버튼 ===== */
+.btn{position:absolute;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;
+  letter-spacing:-0.01em;box-shadow:0 8px 16px rgba(0,0,0,.35);transition:transform .12s,background .15s,color .15s;}
+.btn:active{transform:scale(.97);}
+.btn .ico{flex:none;}
+.btn-p{background:var(--p);}
+.btn-p:active{background:#fff;color:#5856D6;}           /* 눌림 상태 (디자인 8p) */
+.btn-p:active .ico{color:var(--p);}
+.btn-g{background:var(--gr);}
+.btn-r{background:var(--rd);}
+.btn-w{background:#fff;color:var(--rd);}
+.btn-w .ico{color:var(--rd);}
+.hic{position:relative;width:30px;height:27px;flex:none;}
+.hic img{position:absolute;inset:0;width:30px;height:27px;}
+.hic .i2{opacity:0;}
+.btn-p:active .hic .i1{opacity:0;} .btn-p:active .hic .i2{opacity:1;}
+
+/* ===== 뒤로 / 타이머 / 홈 ===== */
+.back{position:absolute;left:26px;top:538px;width:64px;height:64px;border-radius:50%;
+  background:rgba(255,255,255,.1);border:1px solid #696969;box-shadow:0 0 14px rgba(113,110,255,.25);}
+.back svg{position:absolute;left:18px !important;top:16px !important;}
+.back:active{transform:scale(.94);}
+.timer{position:absolute;left:1632px;top:70px;width:96px;height:96px;}
+.timer svg{position:absolute;inset:0;width:96px;height:96px;transform:rotate(-90deg);}
+.timer circle{fill:none;stroke-width:7;}
+.timer .trk{stroke:rgba(255,255,255,.2);}
+.timer .prg{stroke:var(--p);stroke-dasharray:229.34;stroke-dashoffset:0;transition:stroke-dashoffset 1s linear;}
+.timer span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mont);font-size:30px;font-weight:500;padding-top:1px;}
+.home{position:absolute;left:1744px;top:78px;width:80px;height:80px;border-radius:50%;background:var(--p);}
+.home.white{background:#fff;}
+.home img{position:absolute;left:16px;top:19px;width:48px;height:42px;}
+.home:active{transform:scale(.94);}
+
+/* ===== 1p 시작 ===== */
+.note{position:absolute;animation:float 3.2s ease-in-out infinite;}
+.note.n2{animation-delay:-1.1s;} .note.n3{animation-delay:-2.1s;}
+@keyframes float{0%,100%{translate:0 0;}50%{translate:0 -10px;}}
+
+/* ===== 유리 패널 ===== */
+.glass{position:absolute;border-radius:20px;border:1px solid var(--bd);background:var(--g) center/100% 100% no-repeat;
+  box-shadow:0 0 30px 6px var(--gl);overflow:hidden;transition:box-shadow .3s;}
+.glass::before{content:'';position:absolute;inset:0;background:rgba(0,0,0,.5);}
+.glass > *{z-index:1;}
+.card{position:absolute;background:#fff;}
+.box{position:absolute;border-radius:20px;}
+.num{position:absolute;width:32px;height:32px;border-radius:50%;background:#CBCAFF;color:#000;
+  display:flex;align-items:center;justify-content:center;font-family:var(--mont);font-size:20px;font-weight:500;}
+.wave{animation:wave 2.4s ease-in-out infinite;}
+@keyframes wave{0%,100%{opacity:1;}50%{opacity:.7;}}
+
+/* ===== 3p 사운드 체크 ===== */
+.play{position:absolute;width:76px;height:76px;border-radius:50%;background:#000;
+  box-shadow:0 0 18px 4px color-mix(in srgb,var(--c) 70%,transparent);transition:transform .15s,box-shadow .2s;}
+.play:active{transform:scale(.93);}
+.scard.playing{box-shadow:0 0 44px 12px var(--gl);}
+.scard.playing .play{animation:pulse .9s ease-in-out infinite;}
+@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+
+/* ===== 4~6p 퀴즈 ===== */
+.stars{position:absolute;inset:0;pointer-events:none;}
+.stars i{position:absolute;border-radius:50%;background:#9fb4ff;animation:tw 3s ease-in-out infinite;}
+@keyframes tw{0%,100%{opacity:.25;}50%{opacity:1;}}
+.pill{position:absolute;left:699px;top:85px;width:522px;height:73px;border-radius:36.5px;
+  background:rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 6px 18px rgba(0,0,0,.5);
+  display:flex;align-items:center;justify-content:center;gap:39px;font-family:var(--mont);font-size:30px;font-weight:500;padding-top:1px;}
+
+.spot{position:absolute;width:142px;height:142px;border-radius:50%;border:2px solid var(--cy);
+  box-shadow:0 0 26px rgba(6,182,212,.45),inset 0 0 0 1px rgba(0,0,0,.2);transition:opacity .3s,transform .3s;}
+.spot .ring2{position:absolute;left:23px;top:23px;width:92px;height:92px;border-radius:50%;border:1px solid rgba(6,182,212,.5);}
+.spot .disc{position:absolute;left:24px;top:24px;width:90px;height:90px;border-radius:50%;background:var(--cy);opacity:0;transition:opacity .25s;}
+.spot .tree{color:var(--cy);}
+.spot .lbl{position:absolute;left:-60px;width:258px;top:-53px;height:26px;text-align:center;
+  font-family:var(--mont);font-size:20px;font-weight:500;line-height:26px;color:var(--cy);white-space:nowrap;}
+.spot.hide{opacity:0;transform:scale(.85);}
+.spot.correct .disc{opacity:1;}
+.spot.correct .tree{color:#fff;}
+.spot.wrong{border-color:var(--rd);box-shadow:0 0 26px rgba(255,109,109,.45);}
+.spot.wrong .ring2{border-color:rgba(255,109,109,.5);}
+.spot.wrong .tree,.spot.wrong .lbl{color:var(--rd);}
+
+.ch{position:absolute;opacity:0;transition:opacity .3s;}
+.ch.on{opacity:1;}
+#chOK.on{animation:pop .45s ease-out;}
+#chNG.on{animation:pop .45s ease-out;}
+@keyframes pop{0%{transform:scale(.9);}60%{transform:scale(1.03);}100%{transform:scale(1);}}
+
+.qpanel{position:absolute;left:233px;top:817px;width:1455px;height:263px;border-radius:40px 40px 0 0;
+  background:rgba(0,0,0,.7);box-shadow:0 0 26px 6px rgba(113,110,255,.55);transition:top .3s,height .3s,box-shadow .3s;}
+.qpanel > div{position:absolute;inset:0;display:none;}
+.qpanel.q .pq,.qpanel.ok .pok,.qpanel.ng .png{display:block;}
+.qpanel.ok,.qpanel.ng{top:760px;height:320px;}
+.qpanel.ok{box-shadow:0 0 26px 6px rgba(34,197,93,.6);}
+.qpanel.ng{box-shadow:0 0 26px 6px rgba(255,109,109,.6);}
+.ansrow{position:absolute;left:0;top:123px;width:100%;height:92px;}
+.ans{position:absolute;top:0;height:92px;border-radius:22px;border:2px solid var(--p);background:rgba(0,0,0,.35);
+  color:var(--p);font-family:var(--mont);font-size:40px;font-weight:500;box-shadow:0 0 18px rgba(113,110,255,.4);
+  transition:background .15s,color .15s,transform .12s;}
+.ans:active{transform:scale(.97);}
+.ans.sel{background:var(--p);color:#000;}
+.rhead{position:absolute;left:0;width:100%;height:42px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:40px;font-weight:700;}
+.replay{position:absolute;left:1724px;top:903px;width:120px;height:120px;border-radius:50%;background:var(--p);
+  box-shadow:0 8px 18px rgba(0,0,0,.45);transition:transform .12s;}
+.replay svg{position:absolute;left:46px;top:25px;}
+.replay span{position:absolute;left:0;width:120px;top:70px;font-size:20px;font-weight:700;line-height:24px;text-align:center;}
+.replay:active{transform:scale(.95);}
+#s4.state-ok .replay,#s4.state-ng .replay,#s4.state-ok .back,#s4.state-ng .back{display:none;}
+
+/* ===== 7p 결과 ===== */
+.scorecard{position:absolute;left:200px;top:296px;width:375px;height:549px;border-radius:20px;
+  background:url(images/glass_score.jpg) center/100% 100%;border:1px solid rgba(255,255,255,.14);overflow:hidden;}
+.scorecard::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.1);}
+.cntpill{position:absolute;left:246px;top:638px;width:283px;height:82px;border-radius:20px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.85);}
+.memo{position:absolute;left:740px;top:221px;width:284px;height:38px;border-radius:19px;
+  background:rgba(214,214,230,.75);border:1px solid rgba(255,255,255,.8);box-shadow:0 4px 12px rgba(0,0,0,.15);
+  display:flex;align-items:center;gap:7px;padding-left:15px;font-size:12px;color:#000;white-space:nowrap;}
+
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><symbol id="i-back" viewBox="0 0 17.98 28.89"><path fill="currentColor" d="M13.47 27.91C14.44 28.89 16.03 28.89 17 27.91C17.98 26.94 17.98 25.35 17 24.38L15.24 26.14L13.47 27.91M3.54 14.44L1.77 12.68L0 14.44L1.77 16.21L3.54 14.44M17 4.51C17.98 3.54 17.98 1.950 17 0.98C16.03 0 14.44 0 13.47 0.98L15.24 2.74L17 4.51M15.24 26.14L17 24.38L5.3 12.68L3.54 14.44L1.77 16.21L13.47 27.91L15.24 26.14M3.54 14.44L5.3 16.21L17 4.51L15.24 2.74L13.47 0.98L1.77 12.68L3.54 14.44"/></symbol><symbol id="i-check" viewBox="0 0 22.0 17.0"><path fill="currentColor" d="M21.63 2.29L8.09 16.61C7.97 16.73 7.83 16.83 7.68 16.9C7.52 16.97 7.36 17 7.19 17C7.03 17 6.86 16.97 6.71 16.9C6.55 16.83 6.41 16.73 6.29 16.61L0.37 10.34C0.25 10.22 0.16 10.07 0.1 9.91C0.03 9.74 0 9.57 0 9.39C0 9.22 0.03 9.04 0.1 8.88C0.16 8.72 0.25 8.57 0.37 8.44C0.49 8.32 0.63 8.22 0.78 8.15C0.94 8.08 1.1 8.05 1.27 8.05C1.44 8.05 1.6 8.08 1.76 8.15C1.91 8.22 2.05 8.32 2.17 8.44L7.19 13.76L19.83 0.39C20.07 0.14 20.39 0 20.73 0C21.07 0 21.39 0.14 21.63 0.39C21.87 0.65 22 0.99 22 1.34C22 1.7 21.87 2.04 21.63 2.29L21.63 2.29"/></symbol><symbol id="i-chev" viewBox="0 0 14.47 24.69"><path fill="currentColor" d="M2.71 0.59C2.12 0 1.17 0 0.59 0.59C0 1.17 0 2.12 0.59 2.71L1.65 1.65L2.71 0.59M12.35 12.35L13.41 13.41L14.47 12.35L13.41 11.29L12.35 12.35M0.59 21.99C0 22.57 0 23.52 0.59 24.11C1.17 24.69 2.12 24.69 2.71 24.11L1.65 23.05L0.59 21.99M1.65 1.65L0.59 2.71L11.29 13.41L12.35 12.35L13.41 11.29L2.71 0.59L1.65 1.65M12.35 12.35L11.29 11.29L0.59 21.99L1.65 23.05L2.71 24.11L13.41 13.41L12.35 12.35"/></symbol><symbol id="i-note_green" viewBox="0 0 85.84 55.1"><path fill="currentColor" d="M85.84 3.91L37.49 0L22.88 32.27C21.71 30.09 19.85 28.36 17.6 27.32C14.84 26.08 11.71 25.97 8.89 27.01C6.07 28.05 3.79 30.16 2.55 32.87C0 38.51 2.59 45.25 8.31 47.84C10.99 49.03 14.02 49.17 16.77 48.21C19.53 47.26 21.79 45.29 23.1 42.71L23.15 42.73L35.74 14.93L74.32 18.28L65.91 36.85C64.74 34.72 62.9 33.02 60.67 32C57.91 30.76 54.78 30.65 51.97 31.69C49.15 32.73 46.87 34.83 45.63 37.55C43.08 43.19 45.67 49.92 51.39 52.51C57.1 55.1 63.87 52.6 66.43 46.96C66.57 46.64 66.64 46.31 66.75 45.98L66.79 46L85.84 3.91M79.04 7.87L76.3 13.92L37.71 10.58L40.35 4.75L79.04 7.87"/></symbol><symbol id="i-note_orange1" viewBox="0 0 69.43 44.57"><path fill="currentColor" d="M69.43 3.16L30.32 0L18.5 26.1C17.56 24.34 16.06 22.94 14.23 22.1C12 21.1 9.47 21.01 7.19 21.85C4.91 22.69 3.07 24.39 2.07 26.59C0 31.15 2.09 36.6 6.72 38.69C8.89 39.66 11.34 39.77 13.57 39C15.79 38.23 17.63 36.63 18.69 34.54L18.73 34.56L28.91 12.08L60.11 14.79L53.31 29.81C52.36 28.08 50.87 26.7 49.07 25.88C46.84 24.88 44.31 24.79 42.03 25.63C39.75 26.47 37.91 28.17 36.91 30.37C34.84 34.93 36.94 40.38 41.56 42.47C46.19 44.57 51.66 42.55 53.73 37.98C53.85 37.73 53.9 37.45 53.99 37.19L54.02 37.2L69.43 3.16M63.93 6.37L61.71 11.26L30.5 8.55L32.64 3.84L63.93 6.37"/></symbol><symbol id="i-note_orange2" viewBox="0 0 46.94 74.08"><path fill="currentColor" d="M25.66 0L0 29.68L14.07 54.64C12.09 54.36 10.07 54.75 8.32 55.72C6.19 56.93 4.62 58.92 3.96 61.26C3.29 63.59 3.57 66.08 4.75 68.19C7.21 72.55 12.84 74.08 17.27 71.59C19.33 70.41 20.86 68.5 21.56 66.25C22.25 63.99 22.05 61.57 20.99 59.49L21.03 59.46L8.91 37.96L29.53 14.39L37.63 28.75C35.68 28.5 33.69 28.88 31.96 29.85C29.83 31.06 28.26 33.05 27.59 35.38C26.93 37.72 27.21 40.21 28.39 42.32C30.85 46.68 36.48 48.21 40.9 45.72C45.33 43.22 46.94 37.61 44.48 33.25C44.34 33 44.15 32.8 43.99 32.57L44.02 32.55L25.66 0M25 6.34L27.63 11.02L7.01 34.59L4.47 30.09L25 6.34"/></symbol><symbol id="i-okcircle" viewBox="0 0 40.83 40.83"><path fill="currentColor" d="M20.42 0C9.19 0 0 9.19 0 20.42C0 31.65 9.19 40.83 20.42 40.83C31.65 40.83 40.83 31.65 40.83 20.42C40.83 9.19 31.65 0 20.42 0M28.99 16.95L19.19 26.75C18.38 27.56 17.15 27.56 16.33 26.75L11.84 22.25C11.03 21.44 11.03 20.21 11.84 19.4C12.66 18.58 13.88 18.58 14.7 19.4L17.76 22.46L26.13 14.09C26.95 13.27 28.17 13.27 28.99 14.09C29.81 14.9 29.81 16.13 28.99 16.95"/></symbol><symbol id="i-refresh" viewBox="0 0 21.67 22.5"><path fill="currentColor" d="M20.58 10.12C19.93 10.12 19.5 10.58 19.5 11.25C19.5 14.51 17.88 17.44 15.17 19.01C11.05 21.49 5.74 20.03 3.36 15.75C0.97 11.47 2.38 5.96 6.5 3.49C10.08 1.35 14.41 2.14 17.12 5.06L14.52 5.06C13.87 5.06 13.43 5.51 13.43 6.19C13.43 6.86 13.87 7.31 14.52 7.31L19.39 7.31C20.04 7.31 20.47 6.86 20.47 6.19L20.47 1.12C20.47 0.45 20.04 0 19.39 0C18.74 0 18.31 0.45 18.31 1.12L18.31 3.15C16.25 1.12 13.65 0 10.83 0C4.88 0 0 5.06 0 11.25C0 17.44 4.88 22.5 10.83 22.5C16.79 22.5 21.67 17.44 21.67 11.25C21.67 10.58 21.23 10.12 20.58 10.12"/></symbol><symbol id="i-refresh_small" viewBox="0 0 28.48 29.58"><path fill="currentColor" d="M27.06 13.31C26.21 13.31 25.64 13.9 25.64 14.79C25.64 19.08 23.5 22.92 19.94 24.99C14.53 28.25 7.55 26.33 4.42 20.71C1.28 15.09 3.13 7.84 8.55 4.58C13.25 1.77 18.94 2.81 22.5 6.66L19.08 6.66C18.23 6.66 17.66 7.25 17.66 8.13C17.66 9.02 18.23 9.61 19.08 9.61L25.49 9.61C26.35 9.61 26.92 9.02 26.92 8.13L26.92 1.48C26.92 0.59 26.35 0 25.49 0C24.64 0 24.07 0.59 24.07 1.48L24.07 4.14C21.36 1.48 17.95 0 14.24 0C6.41 0 0 6.66 0 14.79C0 22.92 6.41 29.58 14.24 29.58C22.08 29.58 28.48 22.92 28.48 14.79C28.48 13.9 27.91 13.31 27.06 13.31"/></symbol><symbol id="i-speaker" viewBox="0 0 43.07 55.06"><path fill="currentColor" d="M4.31 44.77L16.21 44.77C16.88 44.77 17.54 44.92 18.14 45.22L36.84 54.57C37.49 54.9 38.22 55.06 38.95 55.02C39.69 54.99 40.4 54.77 41.02 54.39C41.65 54 42.16 53.46 42.52 52.82C42.88 52.18 43.07 51.46 43.07 50.72L43.07 4.34C43.07 3.6 42.88 2.88 42.52 2.24C42.16 1.6 41.65 1.06 41.02 0.67C40.4 0.29 39.69 0.07 38.95 0.03C38.22 0 37.49 0.15 36.84 0.48L18.14 9.83C17.54 10.13 16.88 10.29 16.21 10.29L4.31 10.29C3.16 10.29 2.07 10.75 1.26 11.55C0.45 12.36 0 13.46 0 14.6L0 40.46C0 41.6 0.45 42.7 1.26 43.5C2.07 44.31 3.16 44.77 4.31 44.77"/></symbol><symbol id="i-speaker2" viewBox="0 0 74.84 54.79"><path fill="currentColor" d="M53.52 41.48C53.98 41.8 54.55 41.93 55.1 41.82C55.66 41.72 56.15 41.41 56.47 40.94C59.2 36.97 60.67 32.24 60.67 27.4C60.67 22.55 59.2 17.83 56.47 13.85C56.14 13.41 55.65 13.11 55.11 13.02C54.56 12.93 54.01 13.05 53.56 13.37C53.1 13.69 52.79 14.17 52.68 14.72C52.58 15.26 52.69 15.83 52.98 16.3C55.23 19.550 56.43 23.43 56.43 27.4C56.43 31.37 55.23 35.24 52.98 38.5C52.83 38.73 52.71 38.99 52.65 39.26C52.59 39.54 52.59 39.82 52.64 40.1C52.69 40.38 52.79 40.64 52.94 40.88C53.09 41.12 53.29 41.32 53.51 41.48L53.52 41.48M63.77 53.79C64.23 54.11 64.8 54.25 65.35 54.15C65.91 54.06 66.4 53.75 66.73 53.28C72.01 45.71 74.84 36.67 74.84 27.4C74.84 18.13 72.01 9.09 66.73 1.51C66.4 1.05 65.91 0.73 65.35 0.64C64.8 0.54 64.23 0.68 63.77 1.01C63.31 1.34 63 1.84 62.91 2.4C62.81 2.96 62.94 3.53 63.27 4C68.04 10.85 70.6 19.02 70.6 27.4C70.6 35.77 68.04 43.95 63.27 50.8C62.94 51.26 62.81 51.83 62.91 52.39C63 52.95 63.31 53.46 63.77 53.79M4.24 44.55L15.96 44.55C16.62 44.55 17.27 44.71 17.86 45.01L36.28 54.31C36.92 54.64 37.64 54.79 38.36 54.76C39.08 54.73 39.79 54.51 40.4 54.12C41.02 53.74 41.52 53.2 41.88 52.57C42.23 51.93 42.41 51.21 42.41 50.48L42.41 4.31C42.41 3.58 42.23 2.87 41.88 2.23C41.52 1.59 41.02 1.05 40.4 0.67C39.79 0.28 39.08 0.07 38.36 0.03C37.64 0 36.92 0.15 36.28 0.48L17.86 9.79C17.27 10.09 16.62 10.24 15.96 10.24L4.24 10.24C3.12 10.24 2.04 10.69 1.24 11.5C0.45 12.3 0 13.39 0 14.53L0 40.26C0 41.4 0.45 42.49 1.24 43.3C2.04 44.1 3.12 44.55 4.24 44.55"/></symbol><symbol id="i-star" viewBox="0 0 11.61 19.33"><path fill="currentColor" d="M5.53 10.86L5.69 6.73L2.16 8.94L1.25 7.37L4.94 5.45L1.25 3.5L2.16 1.92L5.69 4.14L5.53 0L7.34 0L7.18 4.14L10.7 1.92L11.61 3.5L7.95 5.45L11.61 7.37L10.7 8.94L7.18 6.73L7.34 10.86L5.53 10.86"/></symbol><symbol id="i-tree" viewBox="0 0 40.02 38.83"><path fill="currentColor" d="M12.19 0C11.95 0 11.72 0.14 11.6 0.41L6.03 9.74C5.8 10.28 6.11 10.9 6.65 10.9L8.18 10.9L3.17 19.39C2.94 19.93 3.25 20.55 3.79 20.55L5.23 20.55L0.23 29.03C0 29.57 0.31 30.19 0.85 30.19L23.51 30.19C24.05 30.19 24.36 29.57 24.13 29.03L19.16 20.55L20.65 20.55C21.19 20.55 21.5 19.93 21.27 19.39L16.26 10.9L17.71 10.9C18.25 10.9 18.56 10.28 18.33 9.82L12.84 0.41C12.69 0.14 12.43 0 12.19 0M29.12 4.09C28.91 4.09 28.7 4.19 28.58 4.38L23.63 12.79C23.39 13.25 23.7 13.79 24.17 13.79L25.55 13.79L21.08 21.43C20.77 21.9 21.15 22.44 21.62 22.44L22.95 22.44L22.27 23.59L25 28.26L25.04 28.36C25.2 28.72 25.27 29.11 25.26 29.49C25.24 29.88 25.14 30.26 24.96 30.61C24.86 30.79 24.74 30.96 24.59 31.12L39.17 31.12C39.72 31.12 40.02 30.58 39.79 30.11L35.29 22.44L36.62 22.44C37.16 22.44 37.47 21.9 37.16 21.43L32.69 13.79L33.99 13.79C34.53 13.79 34.84 13.25 34.61 12.79L29.66 4.38C29.6 4.29 29.52 4.21 29.43 4.16C29.33 4.11 29.23 4.09 29.12 4.09M10.29 31.12L10.29 38.83L14.15 38.83L14.15 31.12L10.29 31.12M27.22 32.08L27.22 38.83L31.09 38.83L31.09 32.08L27.22 32.08"/></symbol><symbol id="i-xcircle" viewBox="0 0 40.84 40.84"><path fill="currentColor" d="M20.42 0C9.19 0 0 9.19 0 20.42C0 31.65 9.19 40.84 20.42 40.84C31.65 40.84 40.84 31.65 40.84 20.42C40.84 9.19 31.65 0 20.42 0M27.98 25.12C28.79 25.93 28.79 27.16 27.98 27.98C27.16 28.79 25.93 28.79 25.12 27.98L20.42 23.28L15.72 27.98C14.91 28.79 13.68 28.79 12.86 27.98C12.05 27.16 12.05 25.93 12.86 25.12L17.56 20.42L12.86 15.72C12.05 14.91 12.05 13.68 12.86 12.86C13.68 12.05 14.91 12.05 15.72 12.86L20.42 17.56L25.12 12.86C25.93 12.05 27.16 12.05 27.98 12.86C28.79 13.68 28.79 14.91 27.98 15.72L23.28 20.42L27.98 25.12"/></symbol></svg>
+<div id="stage">
+
+<section class="screen active" id="s1">
+  <img class="bg" src="images/bg_purple.jpg" alt="">
+  <img src="images/char_main.png" alt="" style="position:absolute;left:681px;top:200px;width:1280px;height:1280px;">
+  <img src="images/logo.png" alt="" style="position:absolute;left:1613px;top:67px;width:224px;height:70px;">
+  <svg class="note n1" style="position:absolute;left:1012px;top:190px;width:46.94px;height:74.08px;color:#EF7003;"><use href="#i-note_orange2"/></svg>
+  <svg class="note n2" style="position:absolute;left:1534px;top:196px;width:85.84px;height:55.1px;color:#C6EF9C;"><use href="#i-note_green"/></svg>
+  <svg class="note n3" style="position:absolute;left:1683px;top:265px;width:69.43px;height:44.57px;color:#EF7003;"><use href="#i-note_orange1"/></svg>
+  <div class="t " style="left:292px;top:250.0px;font-size:130px;line-height:155px;font-weight:400;color:#fff;letter-spacing:-1px;">양이간</div>
+  <div class="t " style="left:292px;top:405.0px;font-size:130px;line-height:155px;font-weight:400;color:#fff;letter-spacing:-1px;">시간차</div>
+  <div class="t " style="left:307px;top:603.5px;font-size:30px;line-height:38px;font-weight:400;color:#fff;">소리는 어디에서 들릴까요?</div>
+  <button class="btn btn-p" data-go="s2" style="left:290px;top:717px;width:358px;height:101px;border-radius:50.5px;font-size:45px;box-shadow:8px 10px 18px rgba(0,0,0,.45);">시작하기</button>
+</section>
+
+<section class="screen" id="s2">
+  <img class="bg" src="images/bg_purple.jpg" alt="">
+  <div class="t" style="left:0;width:1920px;top:76px;height:72px;display:flex;justify-content:center;align-items:baseline;gap:15px;color:#716EFF;">
+    <span style="font-size:68px;line-height:72px;font-weight:400;">양이간 시간차</span>
+    <span style="font-size:30px;font-family:var(--mont);font-weight:400;">(Interaural Time Difference)</span>
+  </div>
+  <div class="t " style="left:260px;width:1400px;text-align:center;top:180.5px;font-size:24px;line-height:30px;font-weight:400;color:#fff;">소리가 왼쪽 귀와 오른쪽 귀에 도달하는 시간 차이를 이용해 뇌가 소리의 방향과 위치를 판단하는 원리입니다.</div>
+  <div class="glass" style="left:108px;top:256px;width:1696px;height:629px;--g:url(images/glass_info.jpg);--bd:#716EFF;--gl:rgba(90,88,210,.45);"></div>
+
+  <div class="card" style="left:148px;top:296px;width:1224px;height:549px;border-radius:10px;overflow:hidden;">
+    <img src="images/wave.png" alt="" class="wave" style="position:absolute;left:69px;top:-57px;width:389px;height:661px;">
+    <svg class="" style="position:absolute;left:36px;top:242px;width:43.07px;height:55.06px;color:#010101;"><use href="#i-speaker"/></svg>
+    <div class="t " style="left:-626.5px;width:1400px;text-align:center;top:328.0px;font-size:20px;line-height:25px;font-weight:700;color:#000;">소리의 발생원</div>
+    <img src="images/woman_shadow.png" alt="" style="position:absolute;left:358px;top:86px;width:425px;height:472px;opacity:.35;">
+    <img src="images/woman.png" alt="" style="position:absolute;left:354px;top:87px;width:421px;height:491px;">
+    <div class="t " style="left:-248.5px;width:1400px;text-align:center;top:71.0px;font-size:24px;line-height:30px;font-weight:700;color:#000;">가까운 귀</div>
+    <div class="t " style="left:-248.5px;width:1400px;text-align:center;top:101.0px;font-size:20px;line-height:25px;font-weight:400;color:#000;">(소리가 먼저 도달)</div>
+    <div class="t " style="left:50px;width:1400px;text-align:center;top:71.0px;font-size:24px;line-height:30px;font-weight:700;color:#000;">먼 귀</div>
+    <div class="t " style="left:50px;width:1400px;text-align:center;top:101.0px;font-size:20px;line-height:25px;font-weight:400;color:#000;">(소리가 나중에 도달)</div>
+
+    <div class="box" style="left:877px;top:31px;width:307px;height:211px;background:#CBCAFF;">
+      <div class="t " style="left:30px;top:26.5px;font-size:22px;line-height:28px;font-weight:700;color:#000;">양이간 <b style="font-weight:700">兩耳間</b> : 두 귀 사이</div>
+      <div class="t " style="left:30px;top:72.0px;font-size:15px;line-height:18px;font-weight:400;color:#000;"><b>兩</b> (양) : 둘, 두 개</div>
+      <div class="t " style="left:30px;top:95.0px;font-size:15px;line-height:18px;font-weight:400;color:#000;"><b>耳</b> (이) : 귀</div>
+      <div class="t " style="left:30px;top:118.0px;font-size:15px;line-height:18px;font-weight:400;color:#000;"><b>間</b> (간) : 사이</div>
+      <div class="t " style="left:30px;top:157.5px;font-size:16px;line-height:20px;font-weight:700;color:#000;">즉, 양이간은 ‘두 귀 사이’라는 뜻이에요.</div>
+    </div>
+    <div class="box" style="left:877px;top:262px;width:307px;height:256px;background:#C3C3C3;">
+      <div class="t " style="left:30px;top:28.5px;font-size:23px;line-height:29px;font-weight:700;color:#000;">실생활 예시</div>
+      <div class="t" style="left:30px;top:76.5px;font-size:18px;line-height:27px;color:#000;">오른쪽에서 난 소리는 오른쪽 귀에<br>먼저 도달하고, 왼쪽 귀에는 약 0.6<br>밀리초 늦게 도달합니다.</div>
+      <div class="t" style="left:30px;top:170.5px;font-size:18px;line-height:27px;color:#000;">게임 속 발소리의 방향을 구분하는<br>것도 같은 원리입니다.</div>
+    </div>
+  </div>
+
+  <div class="card" style="left:1402px;top:296px;width:370px;height:549px;border-radius:10px;"></div>
+  <div class="t " style="left:887px;width:1400px;text-align:center;top:342.0px;font-size:40px;line-height:50px;font-weight:700;color:#716EFF;">체험방법</div>
+  <div class="num" style="left:1434px;top:444px;">1</div><div class="t " style="left:1479px;top:443.5px;font-size:24px;line-height:30px;font-weight:500;color:#000;">헤드셋을 착용해 주세요.</div><div class="num" style="left:1434px;top:515px;">2</div><div class="t " style="left:1479px;top:514.0px;font-size:24px;line-height:30px;font-weight:500;color:#000;">여러 방향에서 재생되는</div><div class="t " style="left:1479px;top:548.0px;font-size:24px;line-height:30px;font-weight:500;color:#000;">소리를 들어보세요.</div><div class="num" style="left:1434px;top:613px;">3</div><div class="t " style="left:1479px;top:612.0px;font-size:24px;line-height:30px;font-weight:500;color:#000;">소리가 들려오는 방향의</div><div class="t " style="left:1479px;top:646.0px;font-size:24px;line-height:30px;font-weight:500;color:#000;">버튼을 눌러주세요.</div><div class="num" style="left:1434px;top:715px;">4</div><div class="t " style="left:1479px;top:714.0px;font-size:24px;line-height:30px;font-weight:500;color:#000;">정답을 확인하고</div><div class="t " style="left:1479px;top:748.0px;font-size:24px;line-height:30px;font-weight:500;color:#000;">원리 설명을 살펴보세요.</div>
+
+  <button class="btn btn-p" data-go="s3" style="left:751px;top:920px;width:419px;height:81px;border-radius:40.5px;font-size:35px;gap:14px;">
+    <img src="images/icon_headset.png" alt="" style="width:32px;height:29px;margin-top:2px;">헤드셋 착용 후 시작</button>
+  <button class="back" data-go="s1" aria-label="뒤로"><svg class="" style="position:absolute;left:18px;top:16px;width:17.98px;height:28.89px;color:#716EFF;"><use href="#i-back"/></svg></button><div class="timer"><svg viewBox="0 0 96 96"><circle class="trk" cx="48" cy="48" r="36.5"/><circle class="prg" cx="48" cy="48" r="36.5"/></svg><span>60</span></div><button class="home white" data-go="s1" aria-label="처음으로"><img src="images/icon_home_purple.png" alt=""></button>
+</section>
+
+<section class="screen" id="s3">
+  <img class="bg" src="images/bg_purple.jpg" alt="">
+  <div class="t " style="left:260px;width:1400px;text-align:center;top:77.0px;font-size:68px;line-height:84px;font-weight:400;color:#fff;">사운드를 체크해주세요.</div>
+  <div class="t " style="left:260px;width:1400px;text-align:center;top:180.5px;font-size:24px;line-height:30px;font-weight:400;color:#fff;">좌우 스피커가 정상적으로 들리는지 확인해주세요.</div>
+  
+  <div class="glass scard" id="cardL" style="left:124px;top:327px;width:811px;height:461px;--g:url(images/glass_left.jpg);--bd:#06B6D4;--gl:#06B6D466;">
+    <div class="t " style="left:-294.5px;width:1400px;text-align:center;top:75.5px;font-size:40px;line-height:50px;font-weight:600;color:#06B6D4;">왼쪽 &nbsp;ㅣ L</div>
+    <button class="play" data-side="L" style="left:368px;top:190px;--c:#06B6D4;" aria-label="재생"><svg viewBox="0 0 76 76" style="position:absolute;inset:0;width:76px;height:76px;"><path d="M30 21.5 Q30 19.5 31.8 20.5 L54 36.6 Q55.8 38 54 39.4 L31.8 55.5 Q30 56.5 30 54.5Z" fill="#06B6D4"/></svg></button>
+    <div class="t stext" style="left:0;width:811px;text-align:center;top:339px;font-size:30px;line-height:38px;color:#06B6D4;">재생 버튼을 눌러주세요.</div>
+  </div>
+  
+  <div class="glass scard" id="cardR" style="left:985px;top:327px;width:811px;height:461px;--g:url(images/glass_right.jpg);--bd:#D194FF;--gl:#D194FF66;">
+    <div class="t " style="left:-294.5px;width:1400px;text-align:center;top:75.5px;font-size:40px;line-height:50px;font-weight:600;color:#D194FF;">오른쪽 &nbsp;ㅣ R</div>
+    <button class="play" data-side="R" style="left:368px;top:190px;--c:#D194FF;" aria-label="재생"><svg viewBox="0 0 76 76" style="position:absolute;inset:0;width:76px;height:76px;"><path d="M30 21.5 Q30 19.5 31.8 20.5 L54 36.6 Q55.8 38 54 39.4 L31.8 55.5 Q30 56.5 30 54.5Z" fill="#D194FF"/></svg></button>
+    <div class="t stext" style="left:0;width:811px;text-align:center;top:339px;font-size:30px;line-height:38px;color:#D194FF;">재생 버튼을 눌러주세요.</div>
+  </div>
+  <button class="btn btn-p" id="checkReplay" style="left:648px;top:920px;width:279px;height:81px;border-radius:40.5px;font-size:35px;gap:18px;"><svg class="ico" style="width:21.67px;height:22.5px;"><use href="#i-refresh"/></svg>다시 듣기</button>
+  <button class="btn btn-p" data-go="s4" style="left:991px;top:920px;width:281px;height:81px;border-radius:40.5px;font-size:35px;gap:19px;"><svg class="ico" style="width:22.0px;height:17.0px;"><use href="#i-check"/></svg>확인 완료</button>
+  <button class="back" data-go="s2" aria-label="뒤로"><svg class="" style="position:absolute;left:18px;top:16px;width:17.98px;height:28.89px;color:#716EFF;"><use href="#i-back"/></svg></button><div class="timer"><svg viewBox="0 0 96 96"><circle class="trk" cx="48" cy="48" r="36.5"/><circle class="prg" cx="48" cy="48" r="36.5"/></svg><span>60</span></div><button class="home" data-go="s1" aria-label="처음으로"><img src="images/icon_home_white.png" alt=""></button>
+</section>
+
+<section class="screen" id="s4">
+  <img class="bg" src="images/bg_space.jpg" alt="">
+  <div class="stars"></div>
+  <div class="pill"><span style="color:#716EFF;">ROUND <b id="rNum">1</b> / 5</span><span>점수 : <b id="scoreNow">0</b></span></div>
+  <div id="spots">
+    <div class="spot" data-i="0" style="left:153px;top:261px;">
+      <div class="lbl"><span class="ltr">A</span><span class="tag"></span></div>
+      <div class="ring2"></div><div class="disc"></div>
+      <svg class="tree" style="position:absolute;left:49px;top:49px;width:40.02px;height:38.83px;"><use href="#i-tree"/></svg>
+    </div>
+    <div class="spot" data-i="1" style="left:384px;top:539px;">
+      <div class="lbl"><span class="ltr">B</span><span class="tag"></span></div>
+      <div class="ring2"></div><div class="disc"></div>
+      <svg class="tree" style="position:absolute;left:49px;top:49px;width:40.02px;height:38.83px;"><use href="#i-tree"/></svg>
+    </div>
+    <div class="spot" data-i="2" style="left:745px;top:305px;">
+      <div class="lbl"><span class="ltr">C</span><span class="tag"></span></div>
+      <div class="ring2"></div><div class="disc"></div>
+      <svg class="tree" style="position:absolute;left:49px;top:49px;width:40.02px;height:38.83px;"><use href="#i-tree"/></svg>
+    </div>
+    <div class="spot" data-i="3" style="left:1269px;top:432px;">
+      <div class="lbl"><span class="ltr">D</span><span class="tag"></span></div>
+      <div class="ring2"></div><div class="disc"></div>
+      <svg class="tree" style="position:absolute;left:49px;top:49px;width:40.02px;height:38.83px;"><use href="#i-tree"/></svg>
+    </div>
+    <div class="spot" data-i="4" style="left:1644px;top:333px;">
+      <div class="lbl"><span class="ltr">E</span><span class="tag"></span></div>
+      <div class="ring2"></div><div class="disc"></div>
+      <svg class="tree" style="position:absolute;left:49px;top:49px;width:40.02px;height:38.83px;"><use href="#i-tree"/></svg>
+    </div></div>
+
+  <img id="chQ" class="ch" src="images/char_quiz.png" alt="" style="left:745px;top:535px;width:430px;height:431px;clip-path:inset(0 0 149px 0);">
+  <img id="chOK" class="ch" src="images/char_correct.png" alt="" style="left:717px;top:401px;width:487px;height:533px;clip-path:inset(0 0 174px 0);">
+  <img id="chNG" class="ch" src="images/char_wrong.png" alt="" style="left:729px;top:422px;width:413px;height:368px;clip-path:inset(0 0 30px 0);">
+
+  <div class="qpanel" id="qpanel">
+    <div class="pq">
+      <div class="t " style="left:27.5px;width:1400px;text-align:center;top:53.0px;font-size:30px;line-height:38px;font-weight:400;color:#fff;">소리가 발생한 지점은 어디일까요?</div>
+      <div class="ansrow"><button class="ans" data-i="0" style="left:89px;width:235px;">A</button><button class="ans" data-i="1" style="left:350px;width:235px;">B</button><button class="ans" data-i="2" style="left:611px;width:234px;">C</button><button class="ans" data-i="3" style="left:871px;width:238px;">D</button><button class="ans" data-i="4" style="left:1135px;width:231px;">E</button></div>
+    </div>
+    <div class="pok">
+      <div class="rhead" style="top:50px;color:#22C55D;"><svg class="rico" style="width:40.83px;height:40.83px;"><use href="#i-okcircle"/></svg>정답입니다!</div>
+      <div id="okMsg" class="t " style="left:27.5px;width:1400px;text-align:center;top:128.5px;font-size:25px;line-height:31px;font-weight:400;color:#fff;"></div>
+      <button class="btn btn-g" id="okNext" style="left:581px;top:193px;width:293px;height:81px;border-radius:40.5px;font-size:35px;gap:21px;"><span class="nlabel">다음 라운드</span><svg class="ico" style="width:14.47px;height:24.69px;"><use href="#i-chev"/></svg></button>
+    </div>
+    <div class="png">
+      <div class="rhead" style="top:50px;color:#FF6D6D;"><svg class="rico" style="width:40.84px;height:40.84px;"><use href="#i-xcircle"/></svg>오답입니다!</div>
+      <div id="ngMsg" class="t " style="left:27.5px;width:1400px;text-align:center;top:124.5px;font-size:25px;line-height:31px;font-weight:400;color:#fff;"></div>
+      <button class="btn btn-w" id="ngReplay" style="left:426px;top:189px;width:279px;height:81px;border-radius:40.5px;font-size:35px;gap:18px;"><svg class="ico" style="width:21.67px;height:22.5px;"><use href="#i-refresh"/></svg>다시 듣기</button>
+      <button class="btn btn-r" id="ngNext" style="left:735px;top:189px;width:294px;height:81px;border-radius:40.5px;font-size:35px;gap:20px;"><span class="nlabel">다음 라운드</span><svg class="ico" style="width:14.47px;height:24.69px;"><use href="#i-chev"/></svg></button>
+    </div>
+  </div>
+
+  <button class="replay" id="roundReplay"><svg class="" style="width:28.48px;height:29.58px;color:#fff;"><use href="#i-refresh_small"/></svg><span>다시 듣기</span></button>
+  <button class="back" data-go="s3" aria-label="뒤로"><svg class="" style="position:absolute;left:18px;top:16px;width:17.98px;height:28.89px;color:#716EFF;"><use href="#i-back"/></svg></button><div class="timer"><svg viewBox="0 0 96 96"><circle class="trk" cx="48" cy="48" r="36.5"/><circle class="prg" cx="48" cy="48" r="36.5"/></svg><span>60</span></div><button class="home" data-go="s1" aria-label="처음으로"><img src="images/icon_home_white.png" alt=""></button>
+</section>
+
+<section class="screen" id="s7">
+  <img class="bg" src="images/bg_purple.jpg" alt="">
+  <div class="t " style="left:257.5px;width:1400px;text-align:center;top:76.0px;font-size:68px;line-height:84px;font-weight:400;color:#fff;">양이간 시간차 체험 완료!</div>
+  <div class="t " style="left:259px;width:1400px;text-align:center;top:180.5px;font-size:24px;line-height:30px;font-weight:400;color:#fff;">양이차의 원리를 알아보고 체험을 완료해주세요.</div>
+  <div class="glass" style="left:160px;top:256px;width:1600px;height:629px;--g:url(images/glass_result.jpg);--bd:#716EFF;--gl:rgba(90,88,210,.45);"></div>
+
+  <div class="scorecard"></div>
+  <div class="t " style="left:-312.5px;width:1400px;text-align:center;top:423.0px;font-size:30px;line-height:38px;font-weight:700;color:#fff;">나의 결과</div>
+  <div class="t " style="left:-313px;width:1400px;text-align:center;top:475.5px;font-size:90px;line-height:110px;font-weight:600;color:#716EFF;font-family:var(--mont);"><span id="finalScore">0</span></div>
+  <div class="cntpill"></div>
+  <div class="t " style="left:-313px;width:1400px;text-align:center;top:654.0px;font-size:40px;line-height:50px;font-weight:500;color:#fff;font-family:var(--mont);"><span id="finalCnt">0</span> / 5</div>
+
+  <div class="box" style="left:605px;top:297px;width:1115px;height:273px;background:#BAB9EE;overflow:hidden;">
+    <div class="t " style="left:50px;top:48.0px;font-size:30px;line-height:38px;font-weight:700;color:#000;">양이간 시간차</div>
+    <div class="t" style="left:50px;top:104.5px;font-size:18px;line-height:27px;color:#000;">소리가 좌우 귀에 도달하는 시간 차이와 음압 차이를 바탕으로<br>뇌가 소리의 방향과 위치를 판단하는 청각 인지 원리입니다. 소리<br>는 음원에서 가까운 귀에 먼저, 먼 귀에 나중에 도달하며, 이 미세한<br>시간차를 통해 우리는 소리의 방향을 인식할 수 있습니다.</div>
+    <svg class="" style="position:absolute;left:621px;top:120px;width:74.84px;height:54.79px;color:#010101;"><use href="#i-speaker2"/></svg>
+    <img src="images/woman_shadow.png" alt="" style="position:absolute;left:764px;top:29px;width:220px;height:257px;opacity:.35;">
+    <img src="images/woman.png" alt="" style="position:absolute;left:764px;top:28px;width:210px;height:245px;">
+    <div class="t " style="left:61.5px;width:1400px;text-align:center;top:43.0px;font-size:21px;line-height:26px;font-weight:700;color:#000;">왼쪽 귀</div>
+    <div class="t " style="left:61.5px;width:1400px;text-align:center;top:70.0px;font-size:17.6px;line-height:22px;font-weight:400;color:#000;">(먼저 도달)</div>
+    <div class="t " style="left:307.5px;width:1400px;text-align:center;top:43.0px;font-size:21px;line-height:26px;font-weight:700;color:#000;">오른쪽 귀</div>
+    <div class="t " style="left:307.5px;width:1400px;text-align:center;top:70.0px;font-size:17.6px;line-height:22px;font-weight:400;color:#000;">(나중에 도달)</div>
+    <div class="memo"><svg class="" style="width:11.61px;height:19.33px;color:#000;margin-top:1px;"><use href="#i-star"/></svg><span>좌/우 위치는 화면을 마주 보는 사용자 시점 기준입니다.</span></div>
+  </div>
+  <div class="box" style="left:605px;top:600px;width:1115px;height:244px;background:#B3B2B6;">
+    <div class="t " style="left:50px;top:48.0px;font-size:30px;line-height:38px;font-weight:700;color:#000;">실생활 속 양이차</div>
+    <div class="t" style="left:50px;top:104.5px;font-size:18px;line-height:27px;color:#000;">· 오른쪽에서 이름을 부르면, 소리가 오른쪽 귀에 먼저 도달하고 왼쪽 귀에는 약 0.6ms 늦게 도달합니다. 이 차이로 뇌는 소리의 방향을 판단합니다.<br>· FPS 게임에서 적의 발소리 방향을 판단할 수 있는 것도 이 원리 덕분입니다. 게임 사운드 엔진은 ITD를 시뮬레이션하여 입체 음향을 구현합니다.<br>· 올빼미는 양쪽 귀의 높이가 다르게 배치되어 상하 방향까지 소리로 판단할 수 있으며, 이는 ITD의 생물학적 진화 사례입니다.</div>
+  </div>
+
+  <button class="btn btn-p" id="retry" style="left:654px;top:920px;width:279px;height:81px;border-radius:40.5px;font-size:35px;gap:18px;"><svg class="ico" style="width:21.67px;height:22.5px;"><use href="#i-refresh"/></svg>다시 도전</button>
+  <button class="btn btn-p" data-go="s1" style="left:997px;top:920px;width:269px;height:81px;border-radius:40.5px;font-size:35px;gap:15px;">
+    <span class="hic"><img class="i1" src="images/icon_home_white.png" alt=""><img class="i2" src="images/icon_home_purple.png" alt=""></span>처음으로</button>
+</section>
+</div>
+<script>
+/* =====================================================================
+   양이간 시간차 (Interaural Time Difference) 체험 콘텐츠
+   - 1920x1080 기준 제작, 모니터 크기에 맞춰 자동으로 꽉 차게 확대/축소
+   - 화면: s1 시작 → s2 원리 설명 → s3 사운드 체크 → s4 퀴즈(5라운드) → s7 결과
+   ===================================================================== */
+
+/* ---------- 설정 ---------- */
+const CONFIG = {
+  ROUNDS: 5,          // 라운드 수
+  POINT: 100,         // 정답 1개당 점수
+  IDLE_SEC: 60,       // 무조작 시 처음 화면으로 돌아가는 시간(초)
+};
+
+/* 퀴즈 음원: file 에 mp3/wav 경로를 넣으면 실제 음원을 사용합니다.
+   (file 이 비어 있으면 코드로 합성한 소리를 재생)
+   ※ 실제 음원 파일을 쓸 때는 VS Code 'Live Server'로 실행해 주세요. */
+const SOUNDS = [
+  { name: '강아지 짖는 소리',   file: '', synth: 'dog'  },
+  { name: '새가 지저귀는 소리', file: '', synth: 'bird' },
+  { name: '종소리',             file: '', synth: 'bell' },
+  { name: '자동차 경적 소리',   file: '', synth: 'horn' },
+  { name: '고양이 울음소리',    file: '', synth: 'cat'  },
+];
+
+/* 음원 지점 (디자인 좌표, 화면 기준) — 청취자(캐릭터 머리)는 (960, 650) */
+const SPOTS = [
+  { label: 'A', x: 224,  y: 332 },
+  { label: 'B', x: 455,  y: 610 },
+  { label: 'C', x: 816,  y: 376 },
+  { label: 'D', x: 1340, y: 503 },
+  { label: 'E', x: 1715, y: 404 },
+];
+const LISTENER = { x: 960, y: 650 };
+
+/* ---------- 화면 맞춤 (가득 차게) ---------- */
+const stage = document.getElementById('stage');
+function fit() {
+  const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+  stage.style.transform = `translate(-50%,-50%) scale(${s})`;
+}
+window.addEventListener('resize', fit);
+fit();
+
+/* ---------- 별 배경 ---------- */
+(function makeStars() {
+  const box = document.querySelector('#s4 .stars');
+  let h = '';
+  for (let i = 0; i < 90; i++) {
+    const s = Math.random() * 2.6 + 1;
+    h += `<i style="left:${Math.random() * 1920}px;top:${Math.random() * 1080}px;width:${s}px;height:${s}px;animation-delay:${-Math.random() * 3}s;opacity:${Math.random()}"></i>`;
+  }
+  box.innerHTML = h;
+})();
+
+/* =====================================================================
+   오디오
+   ===================================================================== */
+let AC = null, master = null;
+const activeNodes = new Set();
+
+function audio() {
+  if (!AC) {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    master = AC.createGain();
+    master.gain.value = 0.9;
+    master.connect(AC.destination);
+  }
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
+function track(node) { activeNodes.add(node); node.onended = () => activeNodes.delete(node); return node; }
+function stopAll() { activeNodes.forEach(n => { try { n.stop(); } catch (e) {} }); activeNodes.clear(); }
+
+function noiseBuffer(sec) {
+  const len = Math.floor(AC.sampleRate * sec);
+  const b = AC.createBuffer(1, len, AC.sampleRate);
+  const d = b.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  return b;
+}
+function env(g, t, a, peak, dur) {
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t + a);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+}
+
+/* ---- 합성 소리들 (dest 로 출력, 재생 길이(초) 반환) ---- */
+const SYNTH = {
+  dog(dest, t) {                                   // 멍! 멍!
+    [0, 0.38].forEach(o => {
+      const s = t + o;
+      const osc = track(AC.createOscillator()); osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(560, s);
+      osc.frequency.exponentialRampToValueAtTime(240, s + 0.16);
+      const bp = AC.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 950; bp.Q.value = 1.2;
+      const g = AC.createGain(); env(g, s, 0.012, 1.0, 0.2);
+      osc.connect(bp).connect(g).connect(dest);
+      const n = track(AC.createBufferSource()); n.buffer = noiseBuffer(0.2);
+      const nb = AC.createBiquadFilter(); nb.type = 'bandpass'; nb.frequency.value = 1800; nb.Q.value = 0.8;
+      const ng = AC.createGain(); env(ng, s, 0.005, 0.35, 0.12);
+      n.connect(nb).connect(ng).connect(dest);
+      osc.start(s); osc.stop(s + 0.22); n.start(s); n.stop(s + 0.2);
+    });
+    return 0.7;
+  },
+  bird(dest, t) {                                  // 짹짹짹
+    for (let i = 0; i < 5; i++) {
+      const s = t + i * 0.13 + (i > 2 ? 0.18 : 0);
+      const osc = track(AC.createOscillator()); osc.type = 'sine';
+      osc.frequency.setValueAtTime(2600, s);
+      osc.frequency.exponentialRampToValueAtTime(4300, s + 0.05);
+      osc.frequency.exponentialRampToValueAtTime(3200, s + 0.09);
+      const g = AC.createGain(); env(g, s, 0.008, 0.55, 0.1);
+      osc.connect(g).connect(dest); osc.start(s); osc.stop(s + 0.11);
+    }
+    return 0.95;
+  },
+  bell(dest, t) {                                  // 댕~
+    const f0 = 660;
+    [[1, 1], [2.76, .5], [5.4, .28], [8.93, .14]].forEach(([m, a]) => {
+      const osc = track(AC.createOscillator()); osc.type = 'sine'; osc.frequency.value = f0 * m;
+      const g = AC.createGain(); env(g, t, 0.004, 0.45 * a, 1.6 / Math.sqrt(m));
+      osc.connect(g).connect(dest); osc.start(t); osc.stop(t + 1.7);
+    });
+    return 1.6;
+  },
+  horn(dest, t) {                                  // 빵빵
+    [0, 0.42].forEach(o => {
+      const s = t + o;
+      const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2000;
+      const g = AC.createGain();
+      g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(0.35, s + 0.02);
+      g.gain.setValueAtTime(0.35, s + 0.28); g.gain.exponentialRampToValueAtTime(0.0001, s + 0.33);
+      lp.connect(g).connect(dest);
+      [415, 523].forEach(f => {
+        const osc = track(AC.createOscillator()); osc.type = 'square'; osc.frequency.value = f;
+        osc.connect(lp); osc.start(s); osc.stop(s + 0.34);
+      });
+    });
+    return 0.8;
+  },
+  cat(dest, t) {                                   // 야옹~
+    const osc = track(AC.createOscillator()); osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(430, t);
+    osc.frequency.linearRampToValueAtTime(780, t + 0.28);
+    osc.frequency.linearRampToValueAtTime(520, t + 0.75);
+    const lfo = track(AC.createOscillator()); lfo.frequency.value = 6;
+    const lg = AC.createGain(); lg.gain.value = 12; lfo.connect(lg).connect(osc.frequency);
+    const bp = AC.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1300; bp.Q.value = 2;
+    const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3000;
+    const g = AC.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.9, t + 0.08);
+    g.gain.setValueAtTime(0.9, t + 0.55); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.8);
+    osc.connect(bp).connect(lp).connect(g).connect(dest);
+    osc.start(t); osc.stop(t + 0.82); lfo.start(t); lfo.stop(t + 0.82);
+    return 0.85;
+  },
+  chime(dest, t) {                                 // 사운드 체크용 '딩동'
+    [[1318.5, 0], [1046.5, 0.32]].forEach(([f, o]) => {
+      const s = t + o;
+      [1, 2].forEach((m, k) => {
+        const osc = track(AC.createOscillator()); osc.type = 'sine'; osc.frequency.value = f * m;
+        const g = AC.createGain(); env(g, s, 0.006, k ? 0.12 : 0.5, 0.9);
+        osc.connect(g).connect(dest); osc.start(s); osc.stop(s + 0.95);
+      });
+    });
+    return 1.3;
+  },
+};
+
+/* 실제 음원 파일 캐시 */
+const fileCache = {};
+async function loadFile(url) {
+  if (fileCache[url]) return fileCache[url];
+  const buf = await fetch(url).then(r => r.arrayBuffer());
+  fileCache[url] = await AC.decodeAudioData(buf);
+  return fileCache[url];
+}
+
+/* 소리 재생: dest 노드로 출력 */
+async function playSoundTo(sound, dest) {
+  const t = AC.currentTime + 0.05;
+  if (sound.file) {
+    try {
+      const b = await loadFile(sound.file);
+      const src = track(AC.createBufferSource()); src.buffer = b;
+      src.connect(dest); src.start(t);
+      return b.duration;
+    } catch (e) { console.warn('음원 로드 실패 → 합성음 사용', e); }
+  }
+  return SYNTH[sound.synth](dest, t);
+}
+
+/* 사운드 체크: 왼쪽(-1) / 오른쪽(+1) 한쪽 스피커에서만 재생 */
+function playSide(side) {
+  audio(); stopAll();
+  const pan = AC.createStereoPanner ? AC.createStereoPanner() : null;
+  let out;
+  if (pan) { pan.pan.value = side === 'L' ? -1 : 1; pan.connect(master); out = pan; }
+  else {                                            // 구형 브라우저 대비
+    const m = AC.createChannelMerger(2); m.connect(master);
+    const g = AC.createGain(); g.connect(m, 0, side === 'L' ? 0 : 1); out = g;
+  }
+  return SYNTH.chime(out, AC.currentTime + 0.03);
+}
+
+/* 퀴즈: 지점 위치에 맞춰 입체음(HRTF + 양이간 시간차/음압차) 재생 */
+async function playAtSpot(sound, spotIdx) {
+  audio(); stopAll();
+  const sp = SPOTS[spotIdx];
+  const dx = (sp.x - LISTENER.x) / 260;     // +: 오른쪽
+  const dz = (sp.y - LISTENER.y) / 260;     // -: 앞쪽(화면 위)
+  const az = Math.atan2(dx, -dz);           // 방위각(rad)
+
+  // 1) HRTF 패너 (브라우저 내장 머리전달함수)
+  const p = AC.createPanner();
+  p.panningModel = 'HRTF'; p.distanceModel = 'inverse';
+  p.refDistance = 1; p.rolloffFactor = 0.9;
+  if (p.positionX) { p.positionX.value = dx; p.positionY.value = 0; p.positionZ.value = dz; }
+  else p.setPosition(dx, 0, dz);
+
+  // 2) 양이간 시간차(ITD)를 조금 더 강조 : Woodworth 식 (r/c)(θ + sinθ)
+  const itd = (0.0875 / 343) * (Math.abs(az) + Math.abs(Math.sin(az)));
+  const split = AC.createChannelSplitter(2), merge = AC.createChannelMerger(2);
+  const dL = AC.createDelay(0.01), dR = AC.createDelay(0.01);
+  dL.delayTime.value = az > 0 ? itd : 0;    // 소리가 오른쪽이면 왼쪽 귀가 늦게
+  dR.delayTime.value = az < 0 ? itd : 0;
+  p.connect(split);
+  split.connect(dL, 0).connect(merge, 0, 0);
+  split.connect(dR, 1).connect(merge, 0, 1);
+  merge.connect(master);
+
+  return playSoundTo(sound, p);
+}
+
+/* =====================================================================
+   화면 전환 / 무조작 타이머
+   ===================================================================== */
+let current = 's1';
+function go(id) {
+  if (!id) return;
+  stopAll();
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+  current = id;
+  if (id === 's3') resetCheck();
+  if (id === 's4') startGame();
+  resetIdle();
+}
+
+let idleLeft = CONFIG.IDLE_SEC, idleTimer = null;
+const CIRC = 2 * Math.PI * 36.5;
+function drawTimer() {
+  document.querySelectorAll('.timer').forEach(tm => {
+    tm.querySelector('span').textContent = idleLeft;
+    tm.querySelector('.prg').style.strokeDashoffset = CIRC * (1 - idleLeft / CONFIG.IDLE_SEC);
+  });
+}
+function resetIdle() {
+  idleLeft = CONFIG.IDLE_SEC;
+  document.querySelectorAll('.timer .prg').forEach(p => { p.style.transition = 'none'; });
+  drawTimer();
+  requestAnimationFrame(() => document.querySelectorAll('.timer .prg').forEach(p => { p.style.transition = ''; }));
+  clearInterval(idleTimer);
+  if (current === 's1') return;
+  idleTimer = setInterval(() => {
+    idleLeft--;
+    drawTimer();
+    if (idleLeft <= 0) { clearInterval(idleTimer); go('s1'); }
+  }, 1000);
+}
+document.addEventListener('pointerdown', () => { if (current !== 's1') resetIdle(); }, true);
+
+/* data-go 버튼 */
+document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => { audio(); go(b.dataset.go); }));
+
+/* =====================================================================
+   3p 사운드 체크
+   ===================================================================== */
+const checkTimers = [];
+function setCard(side, state) {
+  const card = document.getElementById('card' + side);
+  const txt = card.querySelector('.stext');
+  card.classList.toggle('playing', state === 'play');
+  txt.textContent = state === 'play' ? '재생 중입니다.' : state === 'done' ? '소리가 잘 들렸나요?' : '재생 버튼을 눌러주세요.';
+}
+function resetCheck() { checkTimers.forEach(clearTimeout); checkTimers.length = 0; setCard('L', ''); setCard('R', ''); }
+function checkPlay(side, delay = 0) {
+  checkTimers.push(setTimeout(() => {
+    const other = side === 'L' ? 'R' : 'L';
+    if (document.getElementById('card' + other).classList.contains('playing')) setCard(other, 'done');
+    const dur = playSide(side);
+    setCard(side, 'play');
+    checkTimers.push(setTimeout(() => setCard(side, 'done'), dur * 1000));
+  }, delay));
+}
+document.querySelectorAll('.play').forEach(b => b.addEventListener('click', () => { resetCheck(); checkPlay(b.dataset.side); }));
+document.getElementById('checkReplay').addEventListener('click', () => { resetCheck(); checkPlay('L'); checkPlay('R', 1500); });
+
+/* =====================================================================
+   4~6p 퀴즈
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const s4 = $('s4'), panel = $('qpanel');
+const spotEls = [...document.querySelectorAll('.spot')];
+const ansEls = [...document.querySelectorAll('.ans')];
+let rounds = [], round = 0, score = 0, correctCnt = 0, state = 'q', roundTimer = null;
+
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+function startGame() {
+  const snd = shuffle([...SOUNDS]);
+  rounds = []; let prev = -1;
+  for (let i = 0; i < CONFIG.ROUNDS; i++) {
+    let pos; do { pos = Math.floor(Math.random() * SPOTS.length); } while (pos === prev);
+    prev = pos;
+    rounds.push({ sound: snd[i % snd.length], pos });
+  }
+  round = 0; score = 0; correctCnt = 0;
+  startRound();
+}
+
+function setState(st) {
+  state = st;
+  panel.className = 'qpanel ' + st;
+  s4.classList.remove('state-q', 'state-ok', 'state-ng');
+  s4.classList.add('state-' + st);
+  $('chQ').classList.toggle('on', st === 'q');
+  $('chOK').classList.toggle('on', st === 'ok');
+  $('chNG').classList.toggle('on', st === 'ng');
+}
+
+function startRound() {
+  clearTimeout(roundTimer);
+  setState('q');
+  $('rNum').textContent = round + 1;
+  $('scoreNow').textContent = score;
+  spotEls.forEach((el, i) => {
+    el.className = 'spot';
+    el.querySelector('.tag').textContent = '';
+  });
+  ansEls.forEach(b => b.classList.remove('sel'));
+  const last = round === CONFIG.ROUNDS - 1;
+  document.querySelectorAll('.nlabel').forEach(n => n.textContent = last ? '결과 보기' : '다음 라운드');
+  roundTimer = setTimeout(playRound, 700);          // 라운드 시작 시 자동 재생
+}
+function playRound() { const r = rounds[round]; playAtSpot(r.sound, r.pos); }
+
+function answer(i) {
+  if (state !== 'q') return;
+  state = 'lock';
+  clearTimeout(roundTimer);
+  ansEls.forEach((b, k) => b.classList.toggle('sel', k === i));
+  setTimeout(() => judge(i), 350);
+}
+
+function judge(i) {
+  stopAll();
+  const r = rounds[round], ok = i === r.pos, L = SPOTS[r.pos].label;
+  spotEls.forEach((el, k) => {
+    el.className = 'spot';
+    const tag = el.querySelector('.tag');
+    tag.textContent = '';
+    if (k === r.pos) { el.classList.add('correct'); tag.textContent = ' (정답)'; }
+    else if (!ok && k === i) { el.classList.add('wrong'); tag.textContent = ' (오답)'; }
+    else el.classList.add('hide');
+  });
+  if (ok) {
+    score += CONFIG.POINT; correctCnt++;
+    $('scoreNow').textContent = score;
+    $('okMsg').innerHTML = `${r.sound.name}는 이곳에서 들렸어요!&nbsp; +${CONFIG.POINT}점을 획득했어요.`;
+    setState('ok');
+  } else {
+    $('ngMsg').innerHTML = `소리는 ${L} 지점에서 들렸어요!&nbsp; 아쉽지만 다시 한번 들어볼까요?`;
+    setState('ng');
+  }
+}
+
+function nextRound() {
+  stopAll();
+  if (round >= CONFIG.ROUNDS - 1) return showResult();
+  round++;
+  startRound();
+}
+
+ansEls.forEach((b, i) => b.addEventListener('click', () => { audio(); answer(i); }));
+$('roundReplay').addEventListener('click', () => { if (state === 'q') playRound(); });
+$('ngReplay').addEventListener('click', playRound);
+$('okNext').addEventListener('click', nextRound);
+$('ngNext').addEventListener('click', nextRound);
+
+/* =====================================================================
+   7p 결과
+   ===================================================================== */
+function showResult() {
+  $('finalScore').textContent = score;
+  $('finalCnt').textContent = correctCnt;
+  go('s7');
+}
+$('retry').addEventListener('click', () => go('s4'));
+
+/* 키보드 단축키 (테스트용): F = 전체화면 */
+document.addEventListener('keydown', e => {
+  if (e.key === 'f' || e.key === 'F') {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  }
+});
+
+</script>
+</body>
+</html>
